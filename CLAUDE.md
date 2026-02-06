@@ -11,6 +11,7 @@ This is Labrys' global Claude Code configuration. It is cloned to `~/.claude` an
 - `rules/` — Coding standards auto-loaded by Claude Code into every session
 - `commands/` — Slash commands (`/pr`, `/check`, `/testing-plan`)
 - `agents/` — Specialized subagents for domain-specific tasks
+- `docs/` — Internal guides ([Subagents Guide](docs/subagents-guide.md), [Monorepos Guide](docs/monorepos-guide.md))
 
 ## Rules (auto-loaded)
 
