@@ -27,15 +27,28 @@ Create a **generic** agent when the expertise is role-based (e.g., "senior React
 
 ## Bootstrapping with `/agents`
 
-The built-in `/agents` command has a "Generate with Claude" option that produces surprisingly good one-shot agents. Rather than writing a markdown file from scratch, you can describe what you want and let Claude generate the frontmatter and system prompt for you.
+The built-in `/agents` command has a "Generate with Claude" option that produces complete, well-structured agents in one shot. The official docs recommend this as a best practice: generate first, then customize. Running `/agents` → "Create New Agent" → "Generate with Claude" produces a full agent file — frontmatter, system prompt, expertise sections, and integration references — from a single description. It's significantly faster than writing from scratch, and the output quality is high enough to use immediately for many cases.
 
-The key is giving it a detailed prompt. A vague request like "make a code review agent" produces generic output. Instead, front-load the prompt with the specifics that matter:
+The key is giving it a detailed prompt. A vague request like "make a code review agent" produces generic output. Instead, front-load the prompt with the specifics that matter. A strong generation prompt covers six areas:
 
-> Create a [role] agent for [specific project/domain]. It should specialize in [2-3 core areas]. When invoked, it should [describe the workflow — what it checks first, how it structures output, what it hands off]. It needs to know about [key technical details: frameworks, patterns, conventions, file structure]. Restrict tools to [Read/Grep/Glob/Bash or whatever fits]. Use [model] model. Reference these related agents for routing: [list].
+1. **Role and domain** — what the agent is and what project/stack it targets
+2. **Core specializations** — 2-3 specific areas of expertise
+3. **Workflow** — what it checks first, how it structures its work, what it hands off
+4. **Technical context** — frameworks, patterns, conventions, file structure
+5. **Scope boundaries** — what the agent should NOT do (prevents drift into unrelated areas)
+6. **Output format** — how it should structure responses (checklist, narrative, diff annotations)
+
+**Template:**
+
+> Create a [role] agent for [specific project/domain]. It should specialize in [2-3 core areas]. When invoked, it should [describe the workflow — what it checks first, how it structures output, what it hands off]. It needs to know about [key technical details: frameworks, patterns, conventions, file structure]. It should NOT [scope boundaries — what to avoid, what to delegate instead]. Output should be structured as [format: checklist, categorized findings, narrative summary, etc.]. Restrict tools to [Read/Grep/Glob/Bash or whatever fits]. Use [model] model. Reference these related agents for routing: [list].
+
+Two prompt details that improve auto-delegation: include phrases like "Use PROACTIVELY" or "MUST BE USED when..." in your description of when the agent should activate — Claude weights these trigger phrases heavily when deciding whether to route a task. Also specify what the agent should *not* handle, so it delegates cleanly rather than drifting.
 
 **Example prompt for a real agent:**
 
-> Create a migration-reviewer agent for our PostgreSQL database. It should specialize in reviewing Drizzle ORM migration files for correctness, backwards compatibility, and data safety. When invoked, it should check the migration SQL for destructive operations (DROP, ALTER column type, NOT NULL without default), verify the schema diff matches intent, and flag any migration that would lock large tables. It needs to know that we use Drizzle with camelCase columns mapped to snake_case, pgTable callback style, and drizzle-zod for validators. Restrict tools to Read, Grep, Glob, Bash. Use sonnet model. Route to backend-developer for implementation questions and code-reviewer for general code quality.
+> Create a migration-reviewer agent for our PostgreSQL database. It should specialize in reviewing Drizzle ORM migration files for correctness, backwards compatibility, and data safety. When invoked, it should check the migration SQL for destructive operations (DROP, ALTER column type, NOT NULL without default), verify the schema diff matches intent, and flag any migration that would lock large tables. It should NOT implement fixes or write migration code — it should flag issues and route to backend-developer for implementation. Output should be a categorized checklist: safety issues, compatibility warnings, and style notes. It needs to know that we use Drizzle with camelCase columns mapped to snake_case, pgTable callback style, and drizzle-zod for validators. Restrict tools to Read, Grep, Glob, Bash. Use sonnet model. Route to backend-developer for implementation questions and code-reviewer for general code quality.
+
+**Tip:** During generation, press `e` to open the generated prompt in your editor for immediate refinement before saving.
 
 After generation, open the file and refine — tighten the description for better routing, add domain knowledge Claude wouldn't know, and make sure the "Integration with Other Agents" section is accurate. The generated agent is a strong starting point, not the final product.
 
