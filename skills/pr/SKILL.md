@@ -1,5 +1,7 @@
 ---
 description: Generate PR description and create/update pull request
+disable-model-invocation: true
+argument-hint: "[base-branch]"
 ---
 
 You are tasked with generating a comprehensive pull request description and either creating a new PR or updating an existing one.
@@ -104,7 +106,7 @@ gh pr view --json number,title,body 2>&1
 
 ## 7. Create or Update PR
 
-**IMPORTANT: Do NOT ask for user confirmation. Automatically proceed with creating or updating the PR.**
+**Do NOT ask for confirmation about PR content or title — proceed automatically.**
 
 **If PR exists:**
 - Update the PR description with the generated content using:
@@ -117,7 +119,7 @@ EOF
 - Display the PR URL to the user
 
 **If no PR exists:**
-- Create the PR immediately using the base branch determined in step 2 (no confirmation needed):
+- Create the PR immediately using the base branch determined in step 2:
 ```bash
 gh pr create --base <base-branch> --title "[generated title]" --body "$(cat <<'EOF'
 [generated description]
@@ -128,8 +130,8 @@ EOF
 
 ## Important Notes
 
-- NEVER run `git push` without explicit user permission
-- If the current branch is not pushed to remote, inform the user and ask if they want to push it first
+- **PR content**: Auto-create or update without asking for confirmation on content or title.
+- **git push**: NEVER push without explicit user permission. If the branch is not pushed to remote, inform the user and ask whether they want to push first — do not proceed until they confirm.
 - Be thorough in analyzing the diff - look at all changes, not just commit messages
 - If there are a large number of changes, summarize by file/module rather than listing every single change
 - Ensure the PR description is well-formatted and professional

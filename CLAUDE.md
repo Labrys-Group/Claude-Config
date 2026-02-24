@@ -9,7 +9,7 @@ This is Labrys' global Claude Code configuration. It is cloned to `~/.claude` an
 ## Structure
 
 - `rules/` — Coding standards auto-loaded by Claude Code into every session
-- `commands/` — Slash commands (`/pr`, `/check`, `/testing-plan`)
+- `skills/` — Slash commands (`/pr`, `/check`, `/testing-plan`) in the skills format
 - `agents/` — Specialized subagents for domain-specific tasks
 - `docs/` — Internal guides ([Subagents Guide](docs/subagents-guide.md), [Monorepos Guide](docs/monorepos-guide.md))
 
@@ -22,7 +22,9 @@ These define the coding conventions enforced across all projects:
 - **style.md** — PascalCase components/classes, camelCase functions, SCREAMING_SNAKE_CASE constants, hyphenated-lowercase file names (except component files which match their export). Simplicity over cleverness, explicit over implicit.
 - **documentation.md** — README must stay in sync with code; update immediately on architectural changes.
 
-## Commands
+## Skills (Slash Commands)
+
+Skills live in `skills/<name>/SKILL.md` and are invoked as `/name`. All three are user-only (`disable-model-invocation: true`) — Claude will not auto-trigger them.
 
 - `/pr [base-branch]` — Analyzes diff, generates PR description, creates or updates PR via `gh`. Never pushes without permission.
 - `/check` — Discovers CI workflows in `.github/workflows/`, runs locally-runnable checks in parallel, auto-fixes format/lint issues, reports remaining problems.
@@ -44,6 +46,6 @@ Each agent is a markdown file with YAML frontmatter (`name`, `description`, `mod
 
 When modifying this repo:
 - Rules should be concise and opinionated — state what to do, not every possible alternative
-- Commands should be self-contained instructions that work without user interaction where possible
+- Skills should be self-contained instructions that work without user interaction where possible
 - Agents should encode domain knowledge that would take multiple files to discover, not generic advice
 - Keep specialist agents in `agents/example-specialists/` to separate them from the generic set

@@ -1,3 +1,8 @@
+---
+paths:
+  - "**/*.e2e.ts"
+---
+
 # E2E Testing with Playwright
 
 ## Setup
