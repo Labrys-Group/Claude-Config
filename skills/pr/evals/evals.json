@@ -1,0 +1,49 @@
+{
+  "skill_name": "pr",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Run /pr on the git repository at /Users/simontanna/repos/github/Claude-Config. Analyze the current branch and generate a pull request description. IMPORTANT: Do NOT actually create or push the PR — stop before any `gh pr create` or `gh pr edit` commands. Show the branch name, the base branch you would target, and the full PR title and description you would use.",
+      "expected_output": "A complete PR title and description that accurately summarizes the changes on the current branch (simon/syntax-updates). Should include: structured sections, specific details about what changed (paths frontmatter added to rules, commands migrated to skills format), and professional tone. The skill should also check whether the branch is pushed to remote and report on it.",
+      "files": [],
+      "expectations": [
+        "The skill runs git diff (not just git log) to analyze the actual file-level changes",
+        "The skill identifies the correct base branch (main or master)",
+        "The skill checks whether the current branch is pushed to remote and reports the result",
+        "The PR title is under 72 characters",
+        "The PR title names a specific change from the diff (e.g., mentions 'paths', 'skills', 'rules', or 'commands')",
+        "The PR description mentions at least two of these specific artifacts from the actual diff: paths frontmatter, skills/pr/SKILL.md, disable-model-invocation, rules/react.md, or CLAUDE.md",
+        "The PR description has a Summary section explaining why the changes were made, not just what changed",
+        "The PR description includes a Testing section with at least one checkbox"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Run `/pr main` on the repository at /Users/simontanna/repos/github/Claude-Config to generate a PR targeting the 'main' branch. Analyze the diff and generate a PR description. IMPORTANT: Do NOT actually create or push — stop before any gh commands. Show what the PR title and body would be.",
+      "expected_output": "Same quality PR description as eval 1, but this time the skill should use 'main' as the explicitly provided base branch rather than auto-detecting it. The transcript should make clear that 'main' came from the parameter, not from detection.",
+      "files": [],
+      "expectations": [
+        "The skill explicitly acknowledges that 'main' was provided as a parameter (not auto-detected)",
+        "The PR title is under 72 characters",
+        "The PR description references at least two specific files from the actual diff (e.g., rules/react.md, skills/pr/SKILL.md, CLAUDE.md)",
+        "The description explains WHY the changes were made (motivation), not just lists what files changed",
+        "The skill checks whether the branch is pushed to remote and reports the result",
+        "The skill does not ask for confirmation about the PR content or title before proceeding"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Run /pr on the repository at /Users/simontanna/repos/github/Claude-Config. This time, before generating the description, check whether a PR template exists in the repo. Report what you find (template or no template), then generate the PR title and description following the skill instructions. Do NOT create or push the PR.",
+      "expected_output": "The skill should explicitly check for a PR template in .github/ before generating the description. No template will be found, so it should fall back to the default structure (Summary, Changes, Technical Details, Testing, Breaking Changes).",
+      "files": [],
+      "expectations": [
+        "The skill explicitly checks at least two of the four standard template locations (.github/PULL_REQUEST_TEMPLATE.md, .github/pull_request_template.md, docs/PULL_REQUEST_TEMPLATE.md, PULL_REQUEST_TEMPLATE.md)",
+        "The skill correctly reports that no PR template was found",
+        "The PR description uses the default section structure (Summary, Changes, Technical Details, Testing, Breaking Changes — or equivalent)",
+        "The PR description includes a Testing section with at least one checkbox item",
+        "The PR description does not include HTML comment placeholders or template artifact text",
+        "The PR description's Changes section references specific files or values from the actual git diff (not generic placeholders)"
+      ]
+    }
+  ]
+}
