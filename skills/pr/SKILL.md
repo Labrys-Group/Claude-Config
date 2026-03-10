@@ -1,5 +1,7 @@
 ---
 description: Generate PR description and create/update pull request
+disable-model-invocation: true
+argument-hint: "[base-branch]"
 ---
 
 You are tasked with generating a comprehensive pull request description and either creating a new PR or updating an existing one.
@@ -27,21 +29,42 @@ git status
 
 ## 2. Determine the Base Branch
 
-**If a base branch was provided as a parameter to /pr, use that.**
+**If a base branch was provided as a parameter, use it immediately — skip the detection below and go to step 3.**
 
-**Otherwise, auto-detect using this logic:**
+**Otherwise, auto-detect in this order (stop at the first that works):**
 
-1. Try to infer from existing PR or branch configuration:
+1. Check for an existing PR on this branch:
 ```bash
-# Check if there's already a PR and get its base branch
-gh pr view --json baseRefName -q '.baseRefName' 2>/dev/null || echo ""
+gh pr view --json baseRefName -q '.baseRefName' 2>/dev/null
 ```
 
-2. If no existing PR, use the repository's default branch (from step 1):
-   - This is typically `main`, `master`, or `development`
-   - This is the most reliable fallback since feature branches are usually created from the default branch
+2. Get the remote HEAD branch (the repo's default):
+```bash
+git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d' ' -f5
+```
 
-The base branch will be used for generating diffs and creating the PR.
+3. Check the remote tracking branch for the current branch:
+```bash
+git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null | cut -d'/' -f2
+```
+
+4. Fall back to `main` if all else fails — but note this in your output so the user can correct it if wrong.
+
+The detected base branch will be used for generating diffs and creating the PR.
+
+## 2.5. Check if Branch is Pushed
+
+Before proceeding, check whether the current branch is tracked by a remote:
+
+```bash
+git branch -vv | grep "$(git rev-parse --abbrev-ref HEAD)"
+```
+
+If the output shows no remote tracking branch (no `[origin/...]` in the result):
+- Tell the user: "Branch `<name>` is not pushed to remote. You'll need to push it before a PR can be created."
+- Ask: "Push now, or continue to generate the description only?"
+- If they say push: do NOT push — ask them to run `git push -u origin <branch>` themselves (never push autonomously)
+- If they say continue: generate the description and skip steps 6–7
 
 ## 3. Check for PR Template
 
@@ -77,21 +100,30 @@ git diff <base-branch>...HEAD
 git diff <base-branch>...HEAD --stat
 ```
 
-## 5. Generate PR Description
+## 5. Generate PR Title and Description
+
+### Title
+
+Generate a title that:
+- Is under 72 characters
+- Leads with the most significant change (not a file list)
+- Uses a conventional commit prefix if the commit history does (`feat:`, `fix:`, `refactor:`, `chore:`, etc.)
+- Names the *impact*, not just the mechanism — e.g., "Add path-scoped rules to reduce context waste" rather than "Update rules/react.md frontmatter"
+
+### Description
 
 **If a PR template was found in step 3:**
 - Use the template structure as the base
-- Fill in each section of the template with relevant information from the commits and diff
-- Replace HTML comments with actual content
-- Keep all template sections, even if some are brief
+- Fill in each section with information drawn from the actual diff — not from commit messages alone
+- Replace HTML comments with real content; keep all sections even if brief
 
 **If no PR template was found:**
 - Generate a description with these sections: Summary, Changes, Technical Details, Testing, Breaking Changes
 
 **In both cases:**
-- Analyze the full diff, not just commit messages
+- Ground the description in the diff from step 4 — reference specific files, specific values, specific behavior changes
+- Explain the *why* (motivation, problem being solved) in the Summary, not just the *what*
 - Be thorough but concise
-- Use proper markdown formatting
 - Include checkboxes for testing items
 
 ## 6. Check for Existing PR
@@ -104,7 +136,7 @@ gh pr view --json number,title,body 2>&1
 
 ## 7. Create or Update PR
 
-**IMPORTANT: Do NOT ask for user confirmation. Automatically proceed with creating or updating the PR.**
+**Do NOT ask for confirmation about PR content or title — proceed automatically.**
 
 **If PR exists:**
 - Update the PR description with the generated content using:
@@ -117,7 +149,7 @@ EOF
 - Display the PR URL to the user
 
 **If no PR exists:**
-- Create the PR immediately using the base branch determined in step 2 (no confirmation needed):
+- Create the PR immediately using the base branch determined in step 2:
 ```bash
 gh pr create --base <base-branch> --title "[generated title]" --body "$(cat <<'EOF'
 [generated description]
@@ -128,8 +160,7 @@ EOF
 
 ## Important Notes
 
-- NEVER run `git push` without explicit user permission
-- If the current branch is not pushed to remote, inform the user and ask if they want to push it first
-- Be thorough in analyzing the diff - look at all changes, not just commit messages
+- **PR content**: Auto-create or update without asking for confirmation on content or title.
+- **git push**: NEVER push autonomously. Step 2.5 handles this check proactively.
 - If there are a large number of changes, summarize by file/module rather than listing every single change
 - Ensure the PR description is well-formatted and professional
