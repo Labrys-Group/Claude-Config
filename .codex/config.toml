@@ -1,0 +1,100 @@
+[features]
+multi_agent = true
+
+[agents]
+max_threads = 10
+max_depth = 1
+
+  [agents.backend-developer]
+  description = """
+Use this agent when building tRPC v11 routers, Drizzle ORM schemas, database queries,
+Zod validation, or Better Auth integration in the T3 Turbo monorepo.
+Examples: creating a new tRPC router, adding a database table, writing API tests,
+implementing authentication checks."""
+  config_file = "agents/backend-developer.toml"
+
+  [agents.code-reviewer]
+  description = """
+Use this agent to review code for quality, security, performance, and adherence
+to T3 Turbo conventions. Invoke after completing a feature, before committing,
+or when preparing a pull request. Also use proactively after code changes to
+catch production readiness issues.
+Examples: reviewing a new tRPC router, checking a React component for pattern
+compliance, auditing schema changes, pre-PR quality gate."""
+  config_file = "agents/code-reviewer.toml"
+
+  [agents.debugger]
+  description = """
+Use this agent when encountering bugs, errors, unexpected behavior, or system
+failures that require systematic diagnosis and root cause analysis. Ideal for
+complex issues spanning multiple layers, intermittent bugs, performance problems,
+or when standard debugging approaches have failed.
+Examples: tRPC errors, hydration mismatches, Drizzle query issues, auth failures,
+type errors, build failures."""
+  config_file = "agents/debugger.toml"
+
+  [agents.defi-protocol-analyst]
+  description = "Generic DeFi protocol analysis, NOT specific to Lagoon or Lido V3. Use lagoon-vault-analyst or lido-staking-vault-analyst for RockSolid vaults."
+  config_file = "agents/defi-protocol-analyst.toml"
+
+  [agents.documentation-engineer]
+  description = """
+Use this agent to create, improve, or audit technical documentation for the
+T3 Turbo monorepo. Includes: API docs, architecture guides, package READMEs,
+CLAUDE.md files, JSDoc for complex functions, and developer onboarding content.
+Examples: documenting a new tRPC router, writing a package README, updating
+architecture docs, creating a quickstart guide."""
+  config_file = "agents/documentation-engineer.toml"
+
+  [agents.frontend-developer]
+  description = """
+Use this agent when building React 19 components, implementing responsive layouts,
+working with shadcn/ui and Tailwind v4, adding interactivity, or improving accessibility.
+Examples: creating UI components, designing with CVA variants, adding dark mode support,
+implementing the controller-view-hook pattern for a feature."""
+  config_file = "agents/frontend-developer.toml"
+
+  [agents.fullstack-developer]
+  description = """
+Use this agent when implementing complete end-to-end features spanning database,
+tRPC API, and frontend across the T3 Turbo monorepo. Also use for cross-layer
+refactoring or troubleshooting issues that may originate from any layer.
+Examples: building a new feature from schema to UI, adding a CRUD workflow,
+coordinating changes across packages."""
+  config_file = "agents/fullstack-developer.toml"
+
+  [agents.lagoon-vault-analyst]
+  description = "Lagoon Protocol v0.5.0 vaults, ERC-7540 async mechanics, settlement flows, fee calculations, RockSolid vault-specific issues."
+  config_file = "agents/lagoon-vault-analyst.toml"
+
+  [agents.lido-staking-vault-analyst]
+  description = "Lido V3 staking vaults, validator operations, share-based minting, staking vault state."
+  config_file = "agents/lido-staking-vault-analyst.toml"
+
+  [agents.nextjs-expert]
+  description = """
+Use this agent when working on Next.js 15 pages, layouts, tRPC data fetching,
+Better Auth integration, or App Router patterns in the T3 Turbo monorepo.
+Examples: creating pages with prefetched data, adding authentication to routes,
+implementing the controller-view-hook pattern, setting up E2E tests."""
+  config_file = "agents/nextjs-expert.toml"
+
+  [agents.qa-expert]
+  description = """
+Use this agent for test strategy, test planning, quality metrics, and testing
+guidance in the T3 Turbo monorepo. Includes: designing test plans for new features,
+improving test coverage, analyzing defect patterns, writing Vitest unit tests,
+Playwright E2E tests, and advocating for quality standards.
+Examples: test plan for a new tRPC router, E2E test for a page, coverage analysis,
+pre-release quality assessment."""
+  config_file = "agents/qa-expert.toml"
+
+  [agents.typescript-pro]
+  description = """
+Use this agent for advanced TypeScript type system work, full-stack type safety,
+and monorepo TypeScript configuration. Includes: designing generic APIs,
+discriminated unions, configuring tsconfig, type guards, Drizzle ORM + Zod typing,
+tRPC type inference, and eliminating unsafe patterns.
+Examples: fixing 'any' types, configuring tsconfig for a new package, creating
+type-safe utilities, debugging complex type errors."""
+  config_file = "agents/typescript-pro.toml"
