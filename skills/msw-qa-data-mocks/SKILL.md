@@ -1,5 +1,5 @@
 ---
-name: qa-data-mocks
+name: msw-qa-data-mocks
 description: Implement an opt-in Mock Service Worker setup for browser QA/dev flows with strict production isolation. Use when adding or refactoring MSW in React/Next/Vite apps, especially when activation must be controlled by both environment variables and URL query params, with mock code kept outside production feature paths.
 ---
 
