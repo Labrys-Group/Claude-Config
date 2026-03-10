@@ -1,5 +1,7 @@
 ---
 description: Generate unit testing plan for a file
+disable-model-invocation: true
+argument-hint: "<file-path>[#L<line-number>]"
 ---
 
 You are tasked with generating a concise, execution-ordered unit testing plan for a code file.
@@ -75,10 +77,10 @@ Find and analyze existing test files to understand patterns:
    - Function size and complexity
    - Dependencies on other functions in the file
    - Whether it's a public/external entry point vs internal helper
-3. **Decide scope** based on context:
-   - **Test only that function** if it's self-contained or a clear entry point
-   - **Test entire file** if functions are tightly coupled
-   - **Test logical group** if the function is part of a cohesive unit with nearby functions
+3. **Decide scope** based on coupling:
+   - **Test only that function** if it's self-contained (no calls to other functions in this file, takes simple types, returns a value). Example: a utility validation function.
+   - **Test entire file** if functions call each other or share state. Example: a token contract where `mint()`, `burn()`, and `transfer()` all update the same balance.
+   - **Test logical group** if the function is part of a cohesive set with nearby functions, but some are independent. Example: an API client where different methods hit different endpoints.
 
 Inform the user of your scope decision:
 - "Planning tests for `transferTokens` function and its dependencies"

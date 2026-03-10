@@ -1,5 +1,6 @@
 ---
 description: Run CI checks locally
+disable-model-invocation: true
 ---
 
 You are tasked with running CI checks locally by analyzing GitHub Actions workflow files.
@@ -55,7 +56,14 @@ Run them all at once in a single response with multiple Bash tool calls.
 
 ## 5. Handle Failures
 
-Based on the type of failure, take appropriate action:
+**Fix strategy by type:**
+- **Format** → Auto-fix all (high confidence, no logic changes)
+- **Lint** → Auto-fix obvious issues only (unused imports, simple rule violations); report others
+- **Typecheck** → Report; fix only missing imports or obvious null checks
+- **Tests** → Report; fix only import errors in test files; never modify app logic
+- **Build** → Report; fix only missing imports or simple syntax errors
+
+When in doubt, add to the issues list rather than making changes.
 
 ### Format Failures
 If format check fails (e.g., `pnpm format` or `prettier --check`):
@@ -134,7 +142,6 @@ After all checks complete and fixes are attempted, provide a summary:
 
 ## Important Notes
 
-- **Be conservative with fixes**: When in doubt, add to the issues list rather than making changes
 - **Never change business logic**: Only fix mechanical/syntactic issues
 - **Run commands in parallel** when possible to save time
 - **If a workflow uses custom scripts**, read them to understand what they do before running

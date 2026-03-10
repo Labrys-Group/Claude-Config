@@ -1,0 +1,13 @@
+# https://taskfile.dev
+
+version: "3"
+
+vars:
+  GREETING: Hello, World!
+
+tasks:
+  convert:
+    cmds:
+      - rm -r .claude
+      - mkdir -p .claude
+      - cp -R agents docs rules skills .claude/
