@@ -45,7 +45,7 @@ Focus on architectural and design aspects, not just correctness:
 
 - Overall approach and design decisions
 - Pattern choices and alternatives
-- Code organization and structure
+- Code organisation and structure
 - Scalability and maintainability implications
 - Separation of concerns
 - Abstraction levels
@@ -86,11 +86,11 @@ Use this exact format for the review:
 2. **[Next concern]**
    - [Same structure]
 
-## Code Organization & Structure
+## Code organisation & Structure
 
 - Separation of concerns analysis
 - Abstraction levels (too abstract? too concrete?)
-- File/module organization
+- File/module organisation
 - Dependency management
 
 ## Scalability & Maintainability
