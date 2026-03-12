@@ -9,7 +9,7 @@ This is Labrys' global Claude Code configuration. It is cloned to `~/.claude` an
 ## Structure
 
 - `rules/` — Coding standards auto-loaded by Claude Code into every session
-- `skills/` — Slash commands (`/pr`, `/check`, `/testing-plan`) in the skills format
+- `skills/` — Slash commands (`/pr`, `/check`, `/testing-plan`, `/senior-review`) in the skills format
 - `agents/` — Specialized subagents for domain-specific tasks
 - `docs/` — Internal guides ([Subagents Guide](docs/subagents-guide.md), [Monorepos Guide](docs/monorepos-guide.md))
 
@@ -24,11 +24,12 @@ These define the coding conventions enforced across all projects:
 
 ## Skills (Slash Commands)
 
-Skills live in `skills/<name>/SKILL.md` and are invoked as `/name`. All three are user-only (`disable-model-invocation: true`) — Claude will not auto-trigger them.
+Skills live in `skills/<name>/SKILL.md` and are invoked as `/name`. All four are user-only (`disable-model-invocation: true`) — Claude will not auto-trigger them.
 
 - `/pr [base-branch]` — Analyzes diff, generates PR description, creates or updates PR via `gh`. Never pushes without permission.
 - `/check` — Discovers CI workflows in `.github/workflows/`, runs locally-runnable checks in parallel, auto-fixes format/lint issues, reports remaining problems.
 - `/testing-plan <file-path>[#L<line>]` — Generates an execution-ordered unit testing plan as a markdown file co-located with the source.
+- `/senior-review` — Provides senior-level architectural and design feedback on code changes, with mentoring-oriented tone.
 
 ## Agents
 
