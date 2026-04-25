@@ -25,7 +25,7 @@ ToolSearch("select:mcp__claude_ai_Figma__get_metadata,mcp__claude_ai_Figma__get_
 **If ToolSearch returns nothing:** The Figma integration needs to be connected. Ask the user to connect Figma via claude.ai settings (`/mcp`), then restart the session. Do not proceed without Figma access — do not implement from memory or screenshots.
 
 **Key tools:**
-- `get_metadata` — XML structural tree (node IDs, names, sizes). Use for cataloguing.
+- `get_metadata` — XML structural tree (node IDs, names, sizes). Use for cataloguing. **Always call via subagent** — root-level responses routinely exceed context limits and this is predictable, not a surprise.
 - `get_design_context` — Reference code + screenshot + design values. Use for implementation when exact values are needed.
 - `get_screenshot` — Visual render of any node. Use first — it's cheap. Only escalate to `get_design_context` when a discrepancy needs exact values to fix.
 
@@ -69,15 +69,16 @@ Do NOT re-fetch root metadata. Instead, work through these steps in order:
 
 ### 4a. Fetch structural metadata for the root node
 
-```
-get_metadata(fileKey, nodeId)
-```
+**Always route `get_metadata` through a subagent.** A root frame covering a full marketing page (height > 2000px, 5+ sections) will exceed context limits — this is predictable, not a contingency. Do not call `get_metadata` in the main session and react to the overflow; plan for the subagent upfront.
 
-⚠️ This response will likely exceed context limits. **Use a subagent to parse it:**
+Call `get_metadata` in your main session, then immediately hand the result file path to a subagent. **Copy the exact file path from the tool result verbatim — do not retype it**, as UUID-based paths are easy to mistype.
 
-> "File at [path] is a JSON array [{type, text}] where text is XML. Extract: (1) the root node name/type/size, (2) a table of its direct children — the XML `name` attribute, id, type, width, height. Return markdown only."
+Subagent briefing template:
+> "The file at **[paste exact path here]** is a JSON array [{type, text}] where text is XML. Using jq or python3 (do NOT use the Read tool — file is too large): (1) extract the root node name, type, width, height; (2) produce a markdown table of ALL direct children with columns: name | id | type | width | height. Return markdown only."
 
 **The XML `name` attribute on each child frame is the authoritative section name** — use it directly in the catalogue. Do not rename sections based on visual guesses; Figma layer names are what designers use to communicate intent.
+
+**If children have generic names** (e.g. `Frame 168655…`): the designer left frames unnamed. In this case, section names in the catalogue must come from screenshots, not layer names — screenshot each child before writing the catalogue and name entries from their visual content.
 
 ### 4b. Screenshot all sections in parallel for verification
 
@@ -240,7 +241,8 @@ Make all fixes across all sections, then run typecheck/build once. Update the ca
 |-----|------|
 | Fetch `0:1` (page root) — returns entire file tree | Start from the URL's `node-id` — it's the right frame |
 | Read large metadata results into main context | Use a subagent to parse oversized responses |
-| Name sections from visual guesses or screenshots | Use the Figma XML `name` attribute — it's authoritative |
+| Name sections from visual guesses or screenshots when layer names exist | Use the Figma XML `name` attribute — it's authoritative |
+| Use layer names when frames are generically named (e.g. `Frame 168…`) | Screenshot each child first — visual content is your only reliable naming signal |
 | Screenshot only the full page to identify sections | Screenshot each section individually — thumbnail is too small |
 | Trust catalogue entry without sanity-checking | Verify node ID + visual content before implementing |
 | Fetch `get_design_context` for every section upfront | Screenshot first — only fetch design context when a discrepancy needs exact values |
@@ -255,6 +257,9 @@ Make all fixes across all sections, then run typecheck/build once. Update the ca
 | Run typecheck after every individual edit | Batch all edits, then verify compilation once at the end |
 | Re-fetch root metadata when a section is missing from the catalogue | Screenshot the root node first — visually check if it exists |
 | Implement a section not found in Figma | Ask the user for the specific node URL rather than guessing |
+| Implement a sub-component node in isolation (e.g. `PieChart`) | Fetch parent metadata first — labels and callouts are often siblings, not children |
+| Download assets from one `get_design_context` call then re-fetch the node (or its parent) before writing code | Download immediately after each fetch — new calls return new URLs; do not mix |
+| Use percentage insets, negative insets >100%, or `calc()` with large px offsets without checking parent size | Verify parent has an explicit fixed size matching Figma dimensions, or convert to size-safe values |
 
 ## Catalogue File Location
 
