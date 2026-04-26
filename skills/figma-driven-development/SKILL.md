@@ -103,7 +103,8 @@ Before implementing, scan for: repeated background layers, shared button variant
    - Responsive variants: Mobile / Tablet / Desktop frames
 6. **Check the config/data layer** (e.g. `site-config.ts`) for copy — a mismatch may live entirely in config, invisible in JSX.
 7. **Download assets immediately after fetching design context — before writing any code.** Asset URLs (`figma.com/api/mcp/asset/...`) expire in 7 days. Each new `get_design_context` call returns new URLs — do not mix URLs from different fetches.
-   - Images/illustrations → `curl -o public/images/[name].[ext] "[url]"`
+   - **Do not assume file format from context** — inspect the URL or run `curl -sI "[url]" | grep content-type` to confirm. Figma assets labelled as images are frequently SVGs, not PNGs or JPEGs.
+   - Images/illustrations → `curl -o public/images/[name].[ext] "[url]"` (use confirmed extension, e.g. `.svg`, `.png`, `.jpg`)
    - Icons (SVG) → `curl -o public/icons/[name].svg "[url]"` — check for existing equivalents first
    - Structural elements (connector lines, dividers, shapes) → **do not download** — reconstruct with CSS (`border`, `linear-gradient`, inline SVG). Never use expiring URLs for UI elements.
    - A static asset approximating a Figma vector is technical debt — flag it; correct impl is CSS.
@@ -115,7 +116,28 @@ Before implementing, scan for: repeated background layers, shared button variant
     - Navigate and screenshot the live browser: `mcp__chrome-devtools__navigate_page(url: "http://localhost:3000")` then `mcp__chrome-devtools__take_screenshot()`
     - Crop to the section — read its bounding box: `mcp__chrome-devtools__evaluate_script(script: "JSON.stringify(document.querySelector('[data-section=\"NAME\"]').getBoundingClientRect())")`
     - Fetch the Figma screenshot for the same node: `get_screenshot(fileKey, sectionNodeId)`
-    - Diff the two. Triage using the priority order in Phase 7d. **Fix all layout, copy, and missing-element issues before proceeding to the next section.**
+    - **Delegate the visual diff to a skeptical subagent.** Do not review it yourself — your first pass will miss things. Spawn an Agent with the following prompt, passing both screenshots as context:
+
+      > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
+      >
+      > Go through every category below. For each one, describe what you see in both images and call out any discrepancy, no matter how small:
+      > - **Layout**: flex direction, alignment (horizontal and vertical), gap, padding, margin — compare every axis
+      > - **Typography**: font size, weight, line height, letter spacing, colour, text-transform, text-decoration — read each text node character by character
+      > - **Copy**: every word, punctuation mark, and line break — do not skim
+      > - **Colour**: backgrounds, borders, text, icon fills — flag anything that looks even slightly off
+      > - **Spacing**: internal padding, gaps between elements, outer margins
+      > - **Sizing**: widths, heights, aspect ratios — flag anything that looks proportionally off
+      > - **Borders & shadows**: radius, width, colour, box-shadow offsets and blur
+      > - **Visual effects**: gradients (direction, stops, colours), opacity, blur, overlay effects — these are the most commonly wrong
+      > - **Charts & data visualisations**: bar heights, line paths, colours, labels, axes, legends — treat every detail as suspect
+      > - **Icons & images**: correct asset, correct size, correct colour/fill, correct orientation
+      > - **Missing elements**: scan the Figma image for anything absent from the browser — decorative lines, badges, indicators, overlays, subtle background patterns
+      > - **Extra elements**: scan the browser image for anything not present in Figma
+      > - **Responsive state**: confirm the viewport matches the intended breakpoint variant
+      >
+      > Output a numbered diff list. An empty list is almost certainly wrong — if you find nothing, re-examine. Justify an empty list explicitly.
+
+    - Read the subagent's diff list. Triage using the priority order in Phase 7d. **Fix all layout, copy, and missing-element issues before proceeding to the next section.**
 
 ## Phase 6: Zooming Into Child Nodes
 
@@ -150,9 +172,28 @@ get_screenshot(fileKey, sectionNodeId)  — all sections at once
 
 ### 7c. Build a diff list before touching code
 
-For each section: **Correct** / **Layout deviation** / **Copy mismatch** / **Missing element** / **Wrong element**.
+**Delegate the visual diff to a skeptical subagent — do not review it yourself.** Spawn an Agent per section (run in parallel) with the following prompt, passing both the Figma screenshot and the browser screenshot as context:
 
-Only fetch `get_design_context` for sections with layout deviations needing exact values.
+> You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
+>
+> Go through every category below. For each one, describe what you see in both images and call out any discrepancy, no matter how small:
+> - **Layout**: flex direction, alignment (horizontal and vertical), gap, padding, margin — compare every axis
+> - **Typography**: font size, weight, line height, letter spacing, colour, text-transform, text-decoration — read each text node character by character
+> - **Copy**: every word, punctuation mark, and line break — do not skim
+> - **Colour**: backgrounds, borders, text, icon fills — flag anything that looks even slightly off
+> - **Spacing**: internal padding, gaps between elements, outer margins
+> - **Sizing**: widths, heights, aspect ratios — flag anything that looks proportionally off
+> - **Borders & shadows**: radius, width, colour, box-shadow offsets and blur
+> - **Visual effects**: gradients (direction, stops, colours), opacity, blur, overlay effects — these are the most commonly wrong
+> - **Charts & data visualisations**: bar heights, line paths, colours, labels, axes, legends — treat every detail as suspect
+> - **Icons & images**: correct asset, correct size, correct colour/fill, correct orientation
+> - **Missing elements**: scan the Figma image for anything absent from the implementation — decorative lines, badges, indicators, overlays, subtle background patterns
+> - **Extra elements**: scan the implementation for anything not present in Figma
+> - **Responsive state**: confirm the viewport matches the intended breakpoint variant
+>
+> Classify each finding: **Layout deviation** / **Copy mismatch** / **Missing element** / **Wrong element** / **Correct**. Output a numbered diff list. An empty list is almost certainly wrong — if you find nothing, re-examine. Justify an empty list explicitly.
+
+Only fetch `get_design_context` for sections where the subagent identified layout deviations needing exact values.
 
 ### 7d. Triage priority
 
