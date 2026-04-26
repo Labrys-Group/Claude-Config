@@ -128,13 +128,15 @@ Before implementing, scan for: repeated background layers, shared button variant
       >
       > Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
       >
+      > **Scale warning:** Scale errors are extremely common and easy to miss — elements that are too small, too large, or incorrectly proportioned relative to their surroundings. Do not trust that something "looks about right." Actively compare the relative size of every element (icons, images, text blocks, buttons, cards) against the Figma design. Ask yourself: does this element occupy the same proportion of the section as it does in the design?
+      >
       > Go through every category below. For each one, describe what you see in both images and call out any discrepancy, no matter how small:
       > - **Layout**: flex direction, alignment (horizontal and vertical), gap, padding, margin — compare every axis
       > - **Typography**: font size, weight, line height, letter spacing, colour, text-transform, text-decoration — read each text node character by character
       > - **Copy**: every word, punctuation mark, and line break — do not skim
       > - **Colour**: backgrounds, borders, text, icon fills — flag anything that looks even slightly off
       > - **Spacing**: internal padding, gaps between elements, outer margins
-      > - **Sizing**: widths, heights, aspect ratios — flag anything that looks proportionally off
+      > - **Scale & sizing**: widths, heights, aspect ratios — this is a high-risk category. Elements are frequently too small or too large. Compare proportions carefully against the Figma design, not just against your expectations.
       > - **Borders & shadows**: radius, width, colour, box-shadow offsets and blur
       > - **Visual effects**: gradients (direction, stops, colours), opacity, blur, overlay effects — these are the most commonly wrong
       > - **Charts & data visualisations**: bar heights, line paths, colours, labels, axes, legends — treat every detail as suspect
@@ -192,13 +194,15 @@ get_screenshot(fileKey, sectionNodeId)  — all sections at once
 >
 > Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
 >
+> **Scale warning:** Scale errors are extremely common and easy to miss — elements that are too small, too large, or incorrectly proportioned relative to their surroundings. Do not trust that something "looks about right." Actively compare the relative size of every element (icons, images, text blocks, buttons, cards) against the Figma design. Ask yourself: does this element occupy the same proportion of the section as it does in the design?
+>
 > Go through every category below. For each one, describe what you see in both images and call out any discrepancy, no matter how small:
 > - **Layout**: flex direction, alignment (horizontal and vertical), gap, padding, margin — compare every axis
 > - **Typography**: font size, weight, line height, letter spacing, colour, text-transform, text-decoration — read each text node character by character
 > - **Copy**: every word, punctuation mark, and line break — do not skim
 > - **Colour**: backgrounds, borders, text, icon fills — flag anything that looks even slightly off
 > - **Spacing**: internal padding, gaps between elements, outer margins
-> - **Sizing**: widths, heights, aspect ratios — flag anything that looks proportionally off
+> - **Scale & sizing**: widths, heights, aspect ratios — this is a high-risk category. Elements are frequently too small or too large. Compare proportions carefully against the Figma design, not just against your expectations.
 > - **Borders & shadows**: radius, width, colour, box-shadow offsets and blur
 > - **Visual effects**: gradients (direction, stops, colours), opacity, blur, overlay effects — these are the most commonly wrong
 > - **Charts & data visualisations**: bar heights, line paths, colours, labels, axes, legends — treat every detail as suspect
