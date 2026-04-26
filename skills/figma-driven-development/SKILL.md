@@ -116,9 +116,17 @@ Before implementing, scan for: repeated background layers, shared button variant
     - Navigate and screenshot the live browser: `mcp__chrome-devtools__navigate_page(url: "http://localhost:3000")` then `mcp__chrome-devtools__take_screenshot()`
     - Crop to the section — read its bounding box: `mcp__chrome-devtools__evaluate_script(script: "JSON.stringify(document.querySelector('[data-section=\"NAME\"]').getBoundingClientRect())")`
     - Fetch the Figma screenshot for the same node: `get_screenshot(fileKey, sectionNodeId)`
-    - **Delegate the visual diff to a skeptical subagent.** Do not review it yourself — your first pass will miss things. Spawn an Agent with the following prompt, passing both screenshots as context:
+    - **Delegate the visual diff to a skeptical subagent.** Do not review it yourself — your first pass will miss things. Spawn an Agent with the following prompt, passing both screenshots and the catalogue entry for this section as context:
 
       > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
+      >
+      > **Section context from the Figma catalogue:**
+      > - Section name: [name from catalogue]
+      > - Node ID: [nodeId]
+      > - Expected size: [width×height from catalogue]
+      > - Catalogue description: [description field verbatim]
+      >
+      > Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
       >
       > Go through every category below. For each one, describe what you see in both images and call out any discrepancy, no matter how small:
       > - **Layout**: flex direction, alignment (horizontal and vertical), gap, padding, margin — compare every axis
@@ -175,6 +183,14 @@ get_screenshot(fileKey, sectionNodeId)  — all sections at once
 **Delegate the visual diff to a skeptical subagent — do not review it yourself.** Spawn an Agent per section (run in parallel) with the following prompt, passing both the Figma screenshot and the browser screenshot as context:
 
 > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
+>
+> **Section context from the Figma catalogue:**
+> - Section name: [name from catalogue]
+> - Node ID: [nodeId]
+> - Expected size: [width×height from catalogue]
+> - Catalogue description: [description field verbatim]
+>
+> Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
 >
 > Go through every category below. For each one, describe what you see in both images and call out any discrepancy, no matter how small:
 > - **Layout**: flex direction, alignment (horizontal and vertical), gap, padding, margin — compare every axis
