@@ -116,7 +116,19 @@ Before implementing, scan for: repeated background layers, shared button variant
     - Navigate and screenshot the live browser: `mcp__chrome-devtools__navigate_page(url: "http://localhost:3000")` then `mcp__chrome-devtools__take_screenshot()`
     - Crop to the section — read its bounding box: `mcp__chrome-devtools__evaluate_script(script: "JSON.stringify(document.querySelector('[data-section=\"NAME\"]').getBoundingClientRect())")`
     - Fetch the Figma screenshot for the same node: `get_screenshot(fileKey, sectionNodeId)`
-    - **Delegate the visual diff to a skeptical subagent.** Do not review it yourself — your first pass will miss things. Spawn an Agent with the following prompt, passing both screenshots and the catalogue entry for this section as context:
+    - **Before spawning the QA subagent, assess review complexity** and assign a pass count (1–3):
+
+      | Score | Criteria | Passes |
+      |-------|----------|--------|
+      | 1 — Simple | Mostly text and basic layout; few or no images, charts, gradients, or overlapping elements | 1 |
+      | 2 — Moderate | Mix of text and visual elements; some gradients, icons, images, or layered components | 2 |
+      | 3 — Complex | Data visualisations, charts, complex gradients, overlapping layers, many small elements, dense information, or anything that challenges AI vision models | 3 |
+
+      State your score and reasoning before proceeding.
+
+    - **Spawn the QA subagent N times sequentially** (where N = your pass count). Each pass receives the same two screenshots and catalogue context, plus a growing cumulative diff list from prior passes. Instruct each pass to: (a) re-examine everything independently, not just confirm prior findings; (b) specifically hunt for issues the prior pass may have missed; (c) add new findings to the cumulative list without removing prior ones.
+
+      Subagent prompt (adapt for pass number — pass 1 has no prior findings; passes 2+ include them):
 
       > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
       >
@@ -127,6 +139,10 @@ Before implementing, scan for: repeated background layers, shared button variant
       > - Catalogue description: [description field verbatim]
       >
       > Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
+      >
+      > **[Pass 2/3 only] Prior findings to build on:**
+      > [paste cumulative diff list from previous passes]
+      > Do NOT simply confirm these — re-examine the images independently first. Then add any new findings. Prior findings may also be wrong; correct them if needed.
       >
       > **Scale warning:** Scale errors are extremely common and easy to miss — elements that are too small, too large, or incorrectly proportioned relative to their surroundings. Do not trust that something "looks about right." Actively compare the relative size of every element (icons, images, text blocks, buttons, cards) against the Figma design. Ask yourself: does this element occupy the same proportion of the section as it does in the design?
       >
@@ -145,9 +161,9 @@ Before implementing, scan for: repeated background layers, shared button variant
       > - **Extra elements**: scan the browser image for anything not present in Figma
       > - **Responsive state**: confirm the viewport matches the intended breakpoint variant
       >
-      > Output a numbered diff list. An empty list is almost certainly wrong — if you find nothing, re-examine. Justify an empty list explicitly.
+      > Output a numbered diff list (cumulative across all passes). An empty list is almost certainly wrong — if you find nothing, re-examine. Justify an empty list explicitly.
 
-    - Read the subagent's diff list. Triage using the priority order in Phase 7d. **Fix all layout, copy, and missing-element issues before proceeding to the next section.**
+    - After all passes, merge findings into a final cumulative diff list. Triage using the priority order in Phase 7d. **Fix all layout, copy, and missing-element issues before proceeding to the next section.**
 
 ## Phase 6: Zooming Into Child Nodes
 
@@ -182,7 +198,17 @@ get_screenshot(fileKey, sectionNodeId)  — all sections at once
 
 ### 7c. Build a diff list before touching code
 
-**Delegate the visual diff to a skeptical subagent — do not review it yourself.** Spawn an Agent per section (run in parallel) with the following prompt, passing both the Figma screenshot and the browser screenshot as context:
+**Delegate the visual diff to a skeptical subagent — do not review it yourself.**
+
+For each section, first assess review complexity and assign a pass count (1–3):
+
+| Score | Criteria | Passes |
+|-------|----------|--------|
+| 1 — Simple | Mostly text and basic layout; few or no images, charts, gradients, or overlapping elements | 1 |
+| 2 — Moderate | Mix of text and visual elements; some gradients, icons, images, or layered components | 2 |
+| 3 — Complex | Data visualisations, charts, complex gradients, overlapping layers, many small elements, dense information, or anything that challenges AI vision models | 3 |
+
+Spawn sections in parallel (one pipeline per section), but within each section run passes **sequentially** — each pass feeds its findings into the next. Subagent prompt (adapt for pass number):
 
 > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
 >
@@ -193,6 +219,10 @@ get_screenshot(fileKey, sectionNodeId)  — all sections at once
 > - Catalogue description: [description field verbatim]
 >
 > Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
+>
+> **[Pass 2/3 only] Prior findings to build on:**
+> [paste cumulative diff list from previous passes]
+> Do NOT simply confirm these — re-examine the images independently first. Then add any new findings. Prior findings may also be wrong; correct them if needed.
 >
 > **Scale warning:** Scale errors are extremely common and easy to miss — elements that are too small, too large, or incorrectly proportioned relative to their surroundings. Do not trust that something "looks about right." Actively compare the relative size of every element (icons, images, text blocks, buttons, cards) against the Figma design. Ask yourself: does this element occupy the same proportion of the section as it does in the design?
 >
@@ -211,7 +241,7 @@ get_screenshot(fileKey, sectionNodeId)  — all sections at once
 > - **Extra elements**: scan the implementation for anything not present in Figma
 > - **Responsive state**: confirm the viewport matches the intended breakpoint variant
 >
-> Classify each finding: **Layout deviation** / **Copy mismatch** / **Missing element** / **Wrong element** / **Correct**. Output a numbered diff list. An empty list is almost certainly wrong — if you find nothing, re-examine. Justify an empty list explicitly.
+> Classify each finding: **Layout deviation** / **Copy mismatch** / **Missing element** / **Wrong element** / **Correct**. Output a cumulative numbered diff list. An empty list is almost certainly wrong — if you find nothing, re-examine. Justify an empty list explicitly.
 
 Only fetch `get_design_context` for sections where the subagent identified layout deviations needing exact values.
 
