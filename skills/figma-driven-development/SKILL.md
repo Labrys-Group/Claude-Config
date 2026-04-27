@@ -300,40 +300,78 @@ If the count is wrong, write the missing files now. Do not proceed until the cou
 9. Apply DRY opportunities from the index.
 10. **Fidelity over DRY:** If a shared component can't express the Figma layout, inline the markup. Don't distort layout to fit a component.
 11. Batch all edits, then run typecheck/build once at the end.
-12. **REQUIRED — Visual gate. Do not move on until this is done:**
-    - Navigate to the live browser, scroll to the section, and take a **section-level screenshot** — never a full-page thumbnail. Thumbnails hide sizing and clipping bugs.
-    - Fetch the Figma screenshot: `get_screenshot(fileKey, sectionNodeId)`
-    - **Read the complexity score from the section file** — do not re-derive it. Use it as the pass count (1 / 2 / 3). State the score and key risks before proceeding.
+12. **REQUIRED — Visual gate. Do not move on until this is done.**
 
-    - **Spawn the QA subagent N times sequentially** (where N = complexity score). Pass the section file content and shared-styles content inline in the prompt — do not ask the subagent to read files itself. Each pass receives the same two screenshots and catalogue context, plus a growing cumulative diff list from prior passes. Instruct each pass to: (a) use the `/image-compare` skill to systematically locate differences via binary spatial decomposition before doing free-form visual analysis; (b) re-examine everything independently, not just confirm prior findings; (c) specifically hunt for issues the prior pass may have missed; (d) add new findings to the cumulative list without removing prior ones.
+    > **Stop. Read this before continuing.**
+    >
+    > If you are thinking any of the following — you are rationalising. Stop and follow the gate anyway.
+    > - "I already looked at the screenshots" → You have confirmation bias from writing the code. A fresh subagent does not.
+    > - "The page looks right" → Eyeballing full-page thumbnails misses copy errors, colour deviations, clipped labels, and scale bugs. The binary decomposition finds what intuition misses.
+    > - "This is just a simple section" → Complexity score 1 still requires one subagent pass. Simple ≠ skip.
+    > - "I can review it myself faster" → You cannot QA your own implementation. Independent review is the point.
+    >
+    > **The subagent is mandatory because you have confirmation bias. You wrote the code. You cannot see your own mistakes reliably.**
 
-      Subagent prompt (adapt for pass number — pass 1 has no prior findings; passes 2+ include them):
+    **Step 1 — Add a blocking todo before starting:**
+    ```
+    TodoWrite: "QA visual gate — [section-name] (complexity [score], [N] pass/passes required)" → in_progress
+    ```
+    Do not mark it complete until all N subagent passes are done and findings are triaged.
 
-      > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. You will be shown two images: a Figma design and a browser implementation. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
+    **Step 2 — Gather the two images:**
+    - Take a **section-level browser screenshot** — scroll to the section, capture that viewport. Never a full-page thumbnail.
+    - Fetch the Figma reference: `get_screenshot(fileKey, sectionNodeId)`
+    - Save both to `/tmp/qa-[section]-browser.png` and `/tmp/qa-[section]-figma.png`
+
+    **Step 3 — Read and state the complexity score:**
+    Read it from the section file. Do not re-derive it. State it aloud:
+    > "Complexity score: [1/2/3]. Pass count: [N]. Key risks: [list from section file]."
+
+    **Step 4 — Spawn N QA subagent passes sequentially** (N = complexity score).
+
+    Fill in this template for each pass — every `[bracket]` must be replaced with real content:
+
+    ```
+    Section: [name from catalogue]
+    Node ID: [nodeId]
+    Expected size: [width×height]
+    Description: [description field verbatim from catalogue]
+    Key elements: [component mapping table verbatim]
+    Expected copy: [copy block verbatim]
+    Complexity score: [1/2/3] — [Simple/Moderate/Complex]
+    Known risks: [key risks list verbatim]
+    Figma image: /tmp/qa-[section]-figma.png
+    Browser image: /tmp/qa-[section]-browser.png
+    Pass number: [1/2/3] of [N]
+    Prior findings: [none | paste cumulative list from prior passes]
+    ```
+
+    Then append the full subagent instructions below. Each pass receives the same images and context plus the growing cumulative findings list. The subagent must:
+    - (a) invoke the `image-compare` skill first — binary spatial decomposition before any free-form visual analysis
+    - (b) re-examine everything independently, not just confirm prior findings
+    - (c) specifically hunt for what prior passes may have missed
+    - (d) add new findings to the cumulative list without removing prior ones
+
+      Subagent prompt body (append after the filled template above):
+
+      > You are a meticulous visual QA reviewer. Your job is to find mistakes — assume they are there, because they almost always are. Your disposition is skeptical and critical. Do not give the benefit of the doubt.
       >
-      > **Section context from the Figma catalogue:**
-      > - Section name: [name from catalogue]
-      > - Node ID: [nodeId]
-      > - Expected size: [width×height from catalogue]
-      > - Catalogue description: [description field verbatim]
-      > - Key elements: [component mapping table verbatim]
-      > - Expected copy: [copy block verbatim]
-      > - Complexity score: [1–3] — [Simple / Moderate / Complex]
-      > - Known error risks: [key risks list from catalogue verbatim — pay extra attention to these]
+      > **FIRST ACTION — mandatory before any other analysis:**
+      > Invoke the `image-compare` skill now. Use it to build colour trees for both images, diff the trees, and zoom into the top divergent leaf regions. Do not do any free-form visual analysis until the binary decomposition is complete. The decomposition tells you WHERE to look; your visual analysis then tells you WHAT changed.
       >
-      > Use this context to understand what elements should be present and to anchor your diff. If the implementation is missing something the catalogue describes, that is a confirmed missing element.
+      > Use the section context below to anchor your diff — if the implementation is missing something the catalogue describes, that is a confirmed missing element.
       >
-      > **[Pass 2/3 only] Prior findings to build on:**
-      > [paste cumulative diff list from previous passes]
-      > Do NOT simply confirm these — re-examine the images independently first. Then add any new findings. Prior findings may also be wrong; correct them if needed.
+      > **[Pass 2/3 only] Prior findings:**
+      > (pasted from prior passes)
+      > Do NOT simply confirm these — re-examine independently first. Add new findings. Correct wrong ones.
       >
-      > **Depth of analysis — follow the instructions for the complexity score above:**
+      > **Depth of analysis by complexity score:**
       >
-      > *Score 1 — Simple:* Standard checklist pass. Cover all categories below. Flag anything that looks off.
+      > *Score 1 — Simple:* image-compare decomposition + standard checklist pass. Flag anything that looks off.
       >
-      > *Score 2 — Moderate:* Standard checklist pass, plus for every visual effect (gradient, shadow, blur, opacity), zoom into that region using the `/image-compare` binary decomposition method before moving on. Do not rely on a gestalt impression of colour or lighting — isolate each effect and compare it explicitly. For every icon and image asset, confirm correct asset identity, colour fill, and that it is not clipped.
+      > *Score 2 — Moderate:* image-compare decomposition first. Then for every visual effect (gradient, shadow, blur, opacity), zoom into that region again before moving on — do not rely on gestalt impression. For every icon/image asset, confirm asset identity, colour fill, and no clipping.
       >
-      > *Score 3 — Complex:* Everything in Score 2, plus: (a) treat each data visualisation element (bar, line, arc, label, axis tick, legend item) as a separate finding — do not summarise as "chart looks correct"; (b) for every overlapping or absolutely positioned element, verify it is not clipping its parent or siblings by inspecting each edge; (c) for every gradient, describe the exact direction and each stop colour from both images before deciding if they match; (d) use `/image-compare` to decompose the entire section into quadrants first, then recurse into any quadrant that shows any difference, no matter how minor, until you reach a 50×50px region or find the root cause; (e) if the section has small repeated elements (icon rows, stat blocks, tag lists), verify each instance individually — do not assume they are all identical.
+      > *Score 3 — Complex:* image-compare decompose entire section into quadrants first, recurse into every quadrant that shows any difference until you reach 50×50px or find root cause. Then: (a) every data visualisation element (bar, arc, label, axis tick, legend item) is a separate finding; (b) every overlapping/absolute element — verify no clipping at each edge; (c) every gradient — describe exact direction and each stop colour from both images before deciding if they match; (d) every small repeated element (icon rows, stat blocks, tag lists) — verify each instance individually.
       >
       > **Scale warning:** Scale errors are extremely common and easy to miss — elements that are too small, too large, or incorrectly proportioned relative to their surroundings. Do not trust that something "looks about right." Actively compare the relative size of every element (icons, images, text blocks, buttons, cards) against the Figma design. Ask yourself: does this element occupy the same proportion of the section as it does in the design?
       >
@@ -486,3 +524,5 @@ These are the non-obvious ones most commonly violated:
 - **Check config/data layer for copy** — mismatches often live there, invisible in JSX
 - **Pass catalogue content inline to subagents** — do not ask subagents to read files themselves
 - **Every section gets a QA pass** — complexity score sets pass count, not whether QA runs
+- **Never QA your own implementation** — always spawn an independent subagent; you cannot see your own mistakes reliably
+- **Visual gate requires a blocking TodoWrite todo** — create it before taking screenshots; do not mark done until all passes complete and findings are resolved
