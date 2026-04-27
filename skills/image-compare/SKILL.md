@@ -133,7 +133,12 @@ def diff_trees(tree_a: dict, tree_b: dict) -> tuple[list[dict], dict[int, dict]]
 **Prefer leaf nodes when selecting candidates** — parent nodes accumulate divergence from all children. Filter to the deepest depth before picking top-N:
 
 ```python
-diffs, index = diff_trees(tree_a, tree_b)
+img_a = np.array(Image.open(path_a).convert("RGB"))
+img_b = np.array(Image.open(path_b).convert("RGB"))
+
+tree = build_tree(img_a, img_b)   # single call builds the combined tree
+diffs, index = diff_trees(tree, tree)  # tree embeds both img_a and img_b
+
 max_d = max(n["depth"] for n in diffs)
 leaf_diffs = [n for n in diffs if n["depth"] == max_d]
 top_candidates = leaf_diffs[:3]
@@ -182,6 +187,7 @@ Repeat — each call moves one level up the tree, doubling the region — until 
 For each difference found, state:
 - **Location**: approximate position (e.g. "top-right, navigation bar")
 - **Pixel coordinates**: `abs_region` and `centre` from the diff node — e.g. `(412, 88, 64, 32)`, centre `(444, 104)`
+- **Signals**: `ssim_score: 0.71` (perceptual similarity, 1 = identical), `colour_distance_raw: 42.3`
 - **Page element** (if working from a live browser): run `document.elementFromPoint(cx, cy)` in DevTools using the centre coords to identify the DOM element
 - **What changed**: specific description (e.g. "button label changed from 'Save' to 'Update'")
 - **Severity**: cosmetic / functional / breaking
@@ -193,11 +199,12 @@ If the diff trees show zero divergence above threshold (~5.0 distance), the imag
 | Situation | Action |
 |-----------|--------|
 | Images different sizes | Resize to same dimensions before building tree |
-| No regions diverge | Increase max_depth or check colour space (RGBA vs RGB) |
+| No regions diverge | Increase max_depth or check colour space (RGBA vs RGB). Also check that both signals (`norm_colour_dist`, `norm_ssim_diff`) are near zero — if one is non-zero, re-examine that signal's raw values |
 | Difference found but context unclear | Step out: walk up the index to parent node |
 | Multiple high-distance nodes | Examine top 3–5, they may be the same logical region split across depth |
 | Very subtle colour shift (e.g. opacity) | Use max_depth=8 and check RGB channels individually |
 | Need to identify DOM element on live page | Use `centre` coords with `document.elementFromPoint(cx, cy)` in DevTools |
+| `ssim_score` is `None` for a candidate | Region was below 11px on one axis — ranking used colour distance only; zoom still valid |
 
 ## Common Mistakes
 
@@ -207,3 +214,4 @@ If the diff trees show zero divergence above threshold (~5.0 distance), the imag
 - **Re-cropping to step out** — the parent node already has the right coordinates. Use `step_out()` with the index rather than computing a new crop size.
 - **Assuming one difference** — run the full top-N scan; there may be multiple independent changes.
 - **Reconstructing offsets in `diff_trees` instead of tracking them in `build_tree`** — every node slice stores its top-left as `(0, 0)` relative to itself, so `child["region"][:2]` is always `(0, 0)`. Any attempt to accumulate offsets during tree traversal produces wrong coordinates. Always pass `abs_x`/`abs_y` into `build_tree` and store `abs_region` there; `diff_trees` must read those values directly without modification.
+- **Calling `build_tree` twice (once per image)** — the updated `build_tree` takes both image arrays and computes SSIM in a single pass. Calling it separately on each image loses the SSIM signal entirely and leaves `ssim_score: None` on all nodes.
