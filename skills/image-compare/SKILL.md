@@ -51,6 +51,7 @@ def build_tree(img_a: np.ndarray, img_b: np.ndarray, max_depth: int = 6, depth: 
         "depth": depth,
         "abs_region": (abs_x, abs_y, w, h),
         "colour": avg_colour(img_a),
+        "colour_b": avg_colour(img_b),
         "ssim_score": node_ssim(img_a, img_b),
         "children": [],
     }
@@ -116,9 +117,9 @@ def diff_trees(tree_a: dict, tree_b: dict) -> tuple[list[dict], dict[int, dict]]
             "depth": a["depth"],
             "abs_region": (x, y, w, h),
             "centre": (x + w // 2, y + h // 2),
-            "colour_distance_raw": colour_distance(a["colour"], b["colour"]),
+            "colour_distance_raw": colour_distance(a["colour"], a["colour_b"]),
             "colour_a": a["colour"],
-            "colour_b": b["colour"],
+            "colour_b": a["colour_b"],
             "ssim_score": a.get("ssim_score"),   # None for small nodes
         })
         for child_a, child_b in zip(a["children"], b["children"]):
@@ -192,7 +193,7 @@ For each difference found, state:
 - **What changed**: specific description (e.g. "button label changed from 'Save' to 'Update'")
 - **Severity**: cosmetic / functional / breaking
 
-If the diff trees show zero divergence above threshold (~5.0 distance), the images are likely identical or the change is sub-pixel. Raise max_depth or check that the images are the same dimensions first.
+If the diff trees show zero divergence above threshold (~0.05 distance), the images are likely identical or the change is sub-pixel. Raise max_depth or check that the images are the same dimensions first.
 
 ## Quick Reference
 
