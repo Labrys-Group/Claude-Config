@@ -81,22 +81,29 @@ def build_tree(img_a: np.ndarray, img_b: np.ndarray, max_depth: int = 6, depth: 
 
 ## Step 2: Diff the Trees
 
-Walk both trees together and score each node by colour distance. Record absolute coordinates for every node — these are used both to crop the image and to map findings back to the page (e.g. for `elementFromPoint` or DevTools inspection).
+Walk both trees together and score each node by colour distance and structural similarity. Record absolute coordinates for every node — these are used both to crop the image and to map findings back to the page (e.g. for `elementFromPoint` or DevTools inspection).
 
 ```python
 def colour_distance(c1, c2) -> float:
     return sum((a - b) ** 2 for a, b in zip(c1, c2)) ** 0.5
 
+def normalise_and_score(diffs: list[dict]) -> list[dict]:
+    colour_vals = [n["colour_distance_raw"] for n in diffs]
+    ssim_diffs  = [1 - n["ssim_score"] for n in diffs if n["ssim_score"] is not None]
+
+    max_c = max(colour_vals) if max(colour_vals) > 0 else 1.0
+    max_s = max(ssim_diffs)  if ssim_diffs and max(ssim_diffs) > 0 else 1.0
+
+    for n in diffs:
+        n["norm_colour_dist"] = n["colour_distance_raw"] / max_c
+        n["norm_ssim_diff"]   = (1 - n["ssim_score"]) / max_s if n["ssim_score"] is not None else 0.0
+        n["distance"]         = max(n["norm_colour_dist"], n["norm_ssim_diff"])
+    return diffs
+
 def diff_trees(tree_a: dict, tree_b: dict) -> tuple[list[dict], dict[int, dict]]:
     """Return (diffs sorted by distance, index mapping node_id → diff_node).
-    abs_region is (x, y, w, h) in image pixels — use these to locate the
-    element on the source page via document.elementFromPoint(x, y).
-    parent_id links to the same node_id in the index for walking up the tree.
-
-    NOTE: abs_region is read directly from each node — build_tree must be
-    called with abs_x/abs_y so coordinates are absolute from the start.
-    Do NOT recompute offsets here; that pattern is broken (child nodes always
-    store (0,0) as their top-left relative to their own slice).
+    distance = max(norm_colour_dist, norm_ssim_diff) — either signal can surface a region.
+    abs_region is (x, y, w, h) in image pixels.
     """
     results = []
     stack = [(tree_a, tree_b)]
@@ -109,12 +116,15 @@ def diff_trees(tree_a: dict, tree_b: dict) -> tuple[list[dict], dict[int, dict]]
             "depth": a["depth"],
             "abs_region": (x, y, w, h),
             "centre": (x + w // 2, y + h // 2),
-            "distance": colour_distance(a["colour"], b["colour"]),
+            "colour_distance_raw": colour_distance(a["colour"], b["colour"]),
             "colour_a": a["colour"],
             "colour_b": b["colour"],
+            "ssim_score": a.get("ssim_score"),   # None for small nodes
         })
         for child_a, child_b in zip(a["children"], b["children"]):
             stack.append((child_a, child_b))
+
+    normalise_and_score(results)
     sorted_results = sorted(results, key=lambda n: n["distance"], reverse=True)
     index = {n["id"]: n for n in sorted_results}
     return sorted_results, index
