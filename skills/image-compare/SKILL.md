@@ -38,7 +38,7 @@ def node_ssim(region_a: np.ndarray, region_b: np.ndarray) -> float | None:
 
 def build_tree(img_a: np.ndarray, img_b: np.ndarray, max_depth: int = 6, depth: int = 0,
                abs_x: int = 0, abs_y: int = 0,
-               node_id: int = 0, parent_id: int | None = None,
+               parent_id: int | None = None,
                _counter: list | None = None) -> dict:
     if _counter is None:
         _counter = [0]
@@ -68,7 +68,7 @@ def build_tree(img_a: np.ndarray, img_b: np.ndarray, max_depth: int = 6, depth: 
                 (img_a[mid:, :], img_b[mid:, :], abs_x, abs_y + mid),
             ]
         node["children"] = [
-            build_tree(ha, hb, max_depth, depth + 1, ax, ay, _counter[0], my_id, _counter)
+            build_tree(ha, hb, max_depth, depth + 1, ax, ay, my_id, _counter)
             for ha, hb, ax, ay in halves
         ]
     return node
