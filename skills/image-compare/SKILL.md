@@ -17,41 +17,59 @@ Build colour tree (both images) → Diff trees → Zoom into most-divergent regi
 
 ## Step 1: Build the Colour Tree
 
-For each image, recursively compute average colour per region:
+For each image, recursively compute average colour per region. Absolute coordinates are
+tracked in `build_tree` itself — **do not** try to reconstruct them in `diff_trees`.
 
 ```python
 from PIL import Image
 import numpy as np
+from skimage.metrics import structural_similarity as sk_ssim
 
 def avg_colour(img_array: np.ndarray) -> tuple[int, int, int]:
     return tuple(img_array.mean(axis=(0, 1)).astype(int)[:3])
 
-def build_tree(img_array: np.ndarray, max_depth: int = 6, depth: int = 0,
+def node_ssim(region_a: np.ndarray, region_b: np.ndarray) -> float | None:
+    h, w = region_a.shape[:2]
+    if min(h, w) < 11:
+        return None
+    gray_a = region_a.mean(axis=2).astype(np.float32) if region_a.ndim == 3 else region_a.astype(np.float32)
+    gray_b = region_b.mean(axis=2).astype(np.float32) if region_b.ndim == 3 else region_b.astype(np.float32)
+    return sk_ssim(gray_a, gray_b, data_range=255.0)
+
+def build_tree(img_a: np.ndarray, img_b: np.ndarray, max_depth: int = 6, depth: int = 0,
+               abs_x: int = 0, abs_y: int = 0,
                node_id: int = 0, parent_id: int | None = None,
                _counter: list | None = None) -> dict:
     if _counter is None:
         _counter = [0]
-    h, w = img_array.shape[:2]
+    h, w = img_a.shape[:2]
     my_id = _counter[0]
     _counter[0] += 1
     node = {
         "id": my_id,
         "parent_id": parent_id,
         "depth": depth,
-        "region": (0, 0, w, h),   # x, y, w, h — relative to this slice
-        "colour": avg_colour(img_array),
+        "abs_region": (abs_x, abs_y, w, h),
+        "colour": avg_colour(img_a),
+        "ssim_score": node_ssim(img_a, img_b),
         "children": [],
     }
-    if depth < max_depth and max(h, w) > 4:
+    if depth < max_depth and min(h, w) >= 11:
         if w >= h:
             mid = w // 2
-            halves = [img_array[:, :mid], img_array[:, mid:]]
+            halves = [
+                (img_a[:, :mid], img_b[:, :mid], abs_x,       abs_y),
+                (img_a[:, mid:], img_b[:, mid:], abs_x + mid, abs_y),
+            ]
         else:
             mid = h // 2
-            halves = [img_array[:mid, :], img_array[mid:, :]]
+            halves = [
+                (img_a[:mid, :], img_b[:mid, :], abs_x, abs_y),
+                (img_a[mid:, :], img_b[mid:, :], abs_x, abs_y + mid),
+            ]
         node["children"] = [
-            build_tree(half, max_depth, depth + 1, _counter[0], my_id, _counter)
-            for half in halves
+            build_tree(ha, hb, max_depth, depth + 1, ax, ay, _counter[0], my_id, _counter)
+            for ha, hb, ax, ay in halves
         ]
     return node
 ```
@@ -74,28 +92,29 @@ def diff_trees(tree_a: dict, tree_b: dict) -> tuple[list[dict], dict[int, dict]]
     abs_region is (x, y, w, h) in image pixels — use these to locate the
     element on the source page via document.elementFromPoint(x, y).
     parent_id links to the same node_id in the index for walking up the tree.
+
+    NOTE: abs_region is read directly from each node — build_tree must be
+    called with abs_x/abs_y so coordinates are absolute from the start.
+    Do NOT recompute offsets here; that pattern is broken (child nodes always
+    store (0,0) as their top-left relative to their own slice).
     """
     results = []
-    stack = [(tree_a, tree_b, (0, 0))]
+    stack = [(tree_a, tree_b)]
     while stack:
-        a, b, offset = stack.pop()
-        ox, oy = offset
-        x, y, w, h = a["region"]
-        abs_x = ox + x
-        abs_y = oy + y
+        a, b = stack.pop()
+        x, y, w, h = a["abs_region"]
         results.append({
             "id": a["id"],
             "parent_id": a["parent_id"],
             "depth": a["depth"],
-            "abs_region": (abs_x, abs_y, w, h),
-            "centre": (abs_x + w // 2, abs_y + h // 2),
+            "abs_region": (x, y, w, h),
+            "centre": (x + w // 2, y + h // 2),
             "distance": colour_distance(a["colour"], b["colour"]),
             "colour_a": a["colour"],
             "colour_b": b["colour"],
         })
         for child_a, child_b in zip(a["children"], b["children"]):
-            cx, cy = child_a["region"][:2]
-            stack.append((child_a, child_b, (ox + cx, oy + cy)))
+            stack.append((child_a, child_b))
     sorted_results = sorted(results, key=lambda n: n["distance"], reverse=True)
     index = {n["id"]: n for n in sorted_results}
     return sorted_results, index
@@ -177,3 +196,4 @@ If the diff trees show zero divergence above threshold (~5.0 distance), the imag
 - **Forgetting padding** — a 4×4 pixel crop gives no context. Always add 20px padding minimum.
 - **Re-cropping to step out** — the parent node already has the right coordinates. Use `step_out()` with the index rather than computing a new crop size.
 - **Assuming one difference** — run the full top-N scan; there may be multiple independent changes.
+- **Reconstructing offsets in `diff_trees` instead of tracking them in `build_tree`** — every node slice stores its top-left as `(0, 0)` relative to itself, so `child["region"][:2]` is always `(0, 0)`. Any attempt to accumulate offsets during tree traversal produces wrong coordinates. Always pass `abs_x`/`abs_y` into `build_tree` and store `abs_region` there; `diff_trees` must read those values directly without modification.
