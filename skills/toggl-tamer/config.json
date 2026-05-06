@@ -1,0 +1,49 @@
+{
+  "projects": [
+    {
+      "name": "Labrys Website V2",
+      "tracker": "jira",
+      "jiraProjectKey": "LW2",
+      "atlassianSiteUrl": "https://labrys.atlassian.net",
+      "atlassianCloudId": "50bac5ce-b21c-47a6-8ccf-0b49d6d2e9dc",
+      "repos": ["/Users/barryearsman/projects/labrys-website-v2"],
+      "githubRepoSlug": "Labrys-Group/labrys-website-v2",
+      "togglProjectName": "Internal Project: Website"
+    }
+  ],
+  "workdayDefaults": {
+    "startTime": "09:00",
+    "endTime": "17:30",
+    "lunchMinutes": 60,
+    "lunchAroundTime": "12:30",
+    "timezone": "Australia/Brisbane"
+  },
+  "userIdentities": {
+    "primaryEmail": "barry@labrys.io",
+    "gitAuthorEmails": ["barry@earsman.com", "barry@labrys.io"],
+    "atlassianAccountId": "712020:d4c90a66-c0fc-418f-96ca-160eeed7066e",
+    "notionUserId": "133d872b-594c-8175-8470-000222bb37b0",
+    "slackUserId": "U07V1KQMVLH"
+  },
+  "notionDailyLog": {
+    "enabled": true,
+    "titlePattern": "^\\d{4}-\\d{2}-\\d{2}$",
+    "parentPageId": null
+  },
+  "internalProject": {
+    "name": "Internal / Ops",
+    "label": "(internal)",
+    "useFor": ["meetings without a project ticket", "process discussions", "ticket triage", "code review on others' PRs", "tooling/automation work"],
+    "togglProjectName": null
+  },
+  "slackEnabled": true,
+  "calendarEnabled": true,
+  "notionEnabled": true,
+  "togglEnabled": true,
+  "togglWrite": {
+    "skipMeta": ["(lunch)", "[unaccounted]"],
+    "tagWithTicket": true,
+    "fallbackProjectName": null
+  },
+  "excludeRepos": ["bazmatic/road-to-integrity"]
+}
